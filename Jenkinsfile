@@ -1,40 +1,46 @@
 pipeline {
     agent any
-    environment {
-        EC2_USER = 'ubuntu'        
-        EC2_HOST = '16.170.16.22'  
-        SSH_CREDENTIALS_ID = 'UBUNTU (SERVER)'  
-        JAR_FILE = 'java -jar app-20250210-094221.jar'  
-    }
+
     stages {
-        stage('Build JAR') {
+        stage('Build') {
+            steps {
+                sh './mvnw clean package'  
+                archiveArtifacts artifacts: '**/*.jar', allowEmptyArchive: true
+            }
+        }
+
+        stage('Deploy to EC2') {
             steps {
                 script {
-                    sh '.mvnw clean package'
+                    def ec2User = "ubuntu"
+                    def ec2Host = "16.170.16.22"
+                    def sshKeyPath = "~/.ssh/pipeline.pem"
+                    def jarFile = "target/app-20250210-094221.jar"
+                    def remotePath = "/home/ubuntu/app-20250210-094221.jar"
+
+                    sh """
+                        scp -i ${sshKeyPath} ${jarFile} ${ec2User}@${ec2Host}:${remotePath}
+                    """
+
+                    sh """
+                        ssh -i ${sshKeyPath} ${ec2User}@${ec2Host} 'nohup java -jar ${remotePath} > /dev/null 2>&1 &'
+                    """
                 }
             }
         }
-        stage('Deploy JAR to EC2') {
+
+        stage('Verify Deployment') {
             steps {
                 script {
-                    sshagent (credentials: [SSH_CREDENTIALS_ID]) {
-                        sh """
-                        scp -o StrictHostKeyChecking=no target/${JAR_FILE} ${EC2_USER}@${EC2_HOST}:/home/${EC2_USER}/
-                        """
-                    }
-                }
-            }
-        }
-        stage('Run JAR on EC2') {
-            steps {
-                script {
-                    sshagent (credentials: [SSH_CREDENTIALS_ID]) {
-                        sh """
-                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} "nohup java -jar /home/${EC2_USER}/${JAR_FILE} > app.log 2>&1 &"
-                        """
-                    }
+                    def ec2Host = "16.170.16.22"
+                    def appPort = "8080"
+                    
+                    sh """
+                        curl http://${ec2Host}:${appPort}
+                    """
                 }
             }
         }
     }
+}
 
