@@ -2,7 +2,7 @@ pipeline {
     agent any
     environment {
         EC2_USER = 'ubuntu'        
-        EC2_HOST = '51.21.180.170'  
+        EC2_HOST = '13.51.107.222'  
         SSH_CREDENTIALS_ID = 'UBUNTU (SERVER)'  
         JAR_FILE = 'java -jar app-20250210-094221.jar'  
     }
