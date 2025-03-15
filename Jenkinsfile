@@ -13,7 +13,7 @@ pipeline {
             steps {
                 script {
                     def ec2User = "ubuntu"
-                    def ec2Host = "13.51.157.173"
+                    def ec2Host = "16.171.237.202"
                     def sshKeyPath = "~/.ssh/pipeline.pem"
                     def jarFile = "target/app-20250210-094221.jar"
                     def remotePath = "/home/ubuntu/app-20250210-094221.jar"
@@ -32,7 +32,7 @@ pipeline {
         stage('Verify Deployment') {
             steps {
                 script {
-                    def ec2Host = "13.51.157.173"
+                    def ec2Host = "16.171.237.202"
                     def appPort = "8080"
                     
                     sh """
