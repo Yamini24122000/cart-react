@@ -1,0 +1,66 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_ACCESS_KEY_ID = credentials('16.171.21.196')
+        AWS_SECRET_ACCESS_KEY = credentials('16.171.21.196')
+        FRONTEND_BUCKET = "mindx-api"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                 git credentialsId: 'github-credentials', url: 'git@github.com:nandhakumar2611/mindx_service_ai_api.git', branch: 'main'
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                dir('backend') {
+                    sh 'npm install' // or pip install -r requirements.txt
+                }
+            }
+        }
+
+        stage('Build Frontend') {
+            steps {
+                dir('frontend') {
+                    // Replace with your build command
+                    sh 'npm install && npm run build'
+                }
+            }
+        }
+
+        stage('Deploy Frontend to S3') {
+            steps {
+                dir('frontend/dist') {
+                    sh 'aws s3 sync . s3://$FRONTEND_BUCKET --delete'
+                }
+            }
+        }
+
+        stage('Deploy Backend to EC2') {
+            steps {
+                sshagent (credentials: ['ec2-ssh-key']) {
+                    sh '''
+                    ssh -o StrictHostKeyChecking=no ec2-user@your-ec2-ip '
+                        cd /var/www/backend &&
+                        git pull origin main &&
+                        npm install &&
+                        pm2 restart app.js
+                    '
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        failure {
+            echo '🚨 Build failed!'
+        }
+        success {
+            echo '✅ Deployment successful!'
+        }
+    }
+}
